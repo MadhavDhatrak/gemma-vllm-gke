@@ -78,7 +78,7 @@ jobs:
         run: |
           helm upgrade --install gemma ./gemma-vllm \
             --set huggingface.token="${{ secrets.HF_TOKEN }}" \
-            --wait --timeout 25m
+            --wait --timeout 40m
 
       - name: Validate deployment
         run: |
