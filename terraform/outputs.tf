@@ -22,3 +22,8 @@ output "region" {
   description = "Deployment Region"
   value       = var.region
 }
+
+output "zone" {
+  description = "GKE Zone"
+  value       = var.zone
+}

@@ -1,0 +1,40 @@
+name: Destroy Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_destroy:
+        description: 'Type "destroy" to confirm'
+        required: true
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+    if: inputs.confirm_destroy == 'destroy'
+    env:
+      TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+      - uses: hashicorp/setup-terraform@v3
+      - uses: azure/setup-helm@v4
+
+      - name: Remove Helm release
+        continue-on-error: true
+        run: |
+          cd terraform && terraform init
+          gcloud container clusters get-credentials "$(terraform output -raw cluster_name)" \
+            --zone "$(terraform output -raw zone)" \
+            --project "${{ secrets.GCP_PROJECT_ID }}"
+          helm uninstall gemma
+
+      - name: Terraform destroy
+        run: |
+          terraform init
+          terraform destroy -auto-approve
+        working-directory: terraform
