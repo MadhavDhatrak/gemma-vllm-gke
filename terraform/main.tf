@@ -64,7 +64,7 @@ resource "google_container_node_pool" "gpu_pool" {
   name     = "gpu-pool"
   cluster  = google_container_cluster.gke.id
   location = var.zone
-   node_locations = [
+  node_locations = [
     var.zone
   ]
 
@@ -73,7 +73,7 @@ resource "google_container_node_pool" "gpu_pool" {
   node_config {
 
     machine_type = var.machine_type
-     disk_size_gb = 150 
+    disk_size_gb = 150
 
     guest_accelerator {
       type  = var.gpu_type
