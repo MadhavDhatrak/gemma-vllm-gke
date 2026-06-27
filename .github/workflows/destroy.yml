@@ -10,7 +10,7 @@ on:
 jobs:
   destroy:
     runs-on: ubuntu-latest
-    if: inputs.confirm_destroy == 'destroy'
+    if: github.event.inputs.confirm_destroy == 'destroy'
     env:
       TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
     steps:
@@ -21,20 +21,26 @@ jobs:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - uses: google-github-actions/setup-gcloud@v2
+        with:
+          install_components: "gke-gcloud-auth-plugin"
+
       - uses: hashicorp/setup-terraform@v3
+
       - uses: azure/setup-helm@v4
+
+      - name: Terraform init      
+        run: terraform init
+        working-directory: terraform
 
       - name: Remove Helm release
         continue-on-error: true
+        working-directory: terraform
         run: |
-          cd terraform && terraform init
           gcloud container clusters get-credentials "$(terraform output -raw cluster_name)" \
             --zone "$(terraform output -raw zone)" \
             --project "${{ secrets.GCP_PROJECT_ID }}"
-          helm uninstall gemma
+          helm uninstall gemma || true
 
       - name: Terraform destroy
-        run: |
-          terraform init
-          terraform destroy -auto-approve
+        run: terraform destroy -auto-approve
         working-directory: terraform
