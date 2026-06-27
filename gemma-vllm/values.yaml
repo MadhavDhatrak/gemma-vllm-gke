@@ -1,0 +1,24 @@
+replicaCount: 1
+
+image:
+  repository: vllm/vllm-openai
+  tag: "gemma4-0505-cu129"
+  pullPolicy: IfNotPresent
+
+model:
+  name: "google/gemma-4-E2B"
+  maxModelLen: 8192
+  dtype: "bfloat16"
+  gpuMemoryUtilization: "0.90"
+  port: 8000
+
+huggingface:
+  token: ""
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+nodeSelector:
+  workload: gpu

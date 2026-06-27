@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-vllm
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-vllm
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-vllm
+    spec:
+      volumes:
+        - name: shm
+          emptyDir:
+            medium: Memory      
+            sizeLimit: 12Gi   
+      containers:
+        - name: vllm
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - python3
+            - -m
+            - vllm.entrypoints.openai.api_server
+            - --model
+            - {{ .Values.model.name | quote }}
+            - --port
+            - {{ .Values.model.port | quote }}
+            - --dtype
+            - {{ .Values.model.dtype | quote }}
+            - --max-model-len
+            - {{ .Values.model.maxModelLen | quote }}
+            - --gpu-memory-utilization
+            - {{ .Values.model.gpuMemoryUtilization | quote }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.model.port }}
+              protocol: TCP
+          env:
+            - name: HF_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-hf-token
+                  key: token
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-hf-token
+                  key: token
+          volumeMounts:
+            - name: shm
+              mountPath: /dev/shm    
+          startupProbe:               
+            httpGet:
+              path: /health
+              port: {{ .Values.model.port }}
+            failureThreshold: 60      
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.model.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.model.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 5
+          resources:
+            requests:
+              memory: "12Gi"
+              cpu: "2"
+              nvidia.com/gpu: "1"
+            limits:
+              memory: "16Gi"
+              cpu: "4"
+              nvidia.com/gpu: "1"
+      nodeSelector:
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
